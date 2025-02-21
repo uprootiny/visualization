@@ -1,38 +1,23 @@
 name: Deploy to GitHub Pages
-
 on:
   push:
     branches:
-      - main  # Trigger on push to 'main' branch
-
+      - main
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-    # Step 1: Checkout code
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    # Step 2: Setup Node.js (using version 18)
-    - name: Setup Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '18'
-
-    # Step 3: Install dependencies
-    - name: Install dependencies
-      run: npm install
-
-    # Step 4: Build the project
-    - name: Build the project
-      run: npm run build
-
-    # Step 5: Deploy to GitHub Pages
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}  # Pass the token here
-        publish_dir: ./dist  # Path to your build output
-        publish_branch: gh-pages
-        allow_empty_commit: true  # Allow an empty commit if there are no changes
+      - uses: actions/checkout@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+      - name: Install and Build
+        run: |
+          npm ci
+          npm run build --production
+      - name: Deploy
+        uses: gh-pages/action@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages
