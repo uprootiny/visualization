@@ -3,14 +3,14 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main  # Trigger on push to the 'main' branch
+      - main  # Trigger on push to 'main' branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Checkout the repository
+    # Step 1: Checkout code
     - name: Checkout code
       uses: actions/checkout@v2
 
@@ -22,17 +22,16 @@ jobs:
 
     # Step 3: Install dependencies
     - name: Install dependencies
-      run: |
-        npm install
+      run: npm install
 
-    # Step 4: Build the project using Vite
+    # Step 4: Build the project
     - name: Build the project
-      run: |
-        npm run build
+      run: npm run build
 
     # Step 5: Deploy to GitHub Pages
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./dist  # Path to your build output (Vite's default is './dist')
+        publish_dir: ./dist  # Path to your build output
+        publish_branch: gh-pages
+        allow_empty_commit: true  # Allow an e
