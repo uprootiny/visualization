@@ -1,0 +1,30 @@
+name: Dev Environment Creator
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: 'Hours to keep environment running'
+        required: false
+        default: '2'
+
+jobs:
+  create-env:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        port: [3000, 3001, 3002]
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Start Development Server
+        run: |
+          npm install
+          npm run dev &
+          
+          # Create SSH tunnel
+          ssh -R ${PORT}:localhost:${PORT} tunnel.example.com &
+          
+          echo "Environment ready at tunnel.example.com:${PORT}"
+          sleep $((60 * ${INPUT_DURATION}))
