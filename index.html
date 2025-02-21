@@ -3,14 +3,303 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>visualization</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>uprootiny's Project Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/react@17.0.2/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/babel-standalone@6.26.0/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-coverflow@0.1.9/dist/react-coverflow.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/react-coverflow@0.1.9/dist/react-coverflow.css" rel="stylesheet">
 </head>
-<body class="bg-gray-900 text-white">
+<body>
     <div id="root"></div>
-    <script type="text/babel" src="/src/main.jsx"></script>
+    <script type="text/babel">
+        const calculateProjectHealth = (repo) => {
+            const metrics = {
+                starScore: Math.min(repo.stargazers_count * 2, 30),
+                updateScore: (() => {
+                    const monthsSinceUpdate = (new Date() - new Date(repo.updated_at)) / (1000 * 60 * 60 * 24 * 30);
+                    return monthsSinceUpdate < 3 ? 30 : monthsSinceUpdate < 6 ? 20 : 10;
+                })(),
+                languageScore: repo.language ? 10 : 0,
+                descriptionScore: repo.description ? 10 : 0,
+                homepageScore: repo.homepage ? 20 : 0
+            };
+            const totalScore = Object.values(metrics).reduce((a, b) => a + b, 0);
+            return {
+                score: Math.min(Math.max(totalScore, 0), 100),
+                metrics
+            };
+        };
+
+        const ProjectCard = ({ repo, perspective }) => {
+            const { score, metrics } = calculateProjectHealth(repo);
+            const [isExpanded, setIsExpanded] = React.useState(false);
+
+            const renderMetricBar = (label, value, maxValue = 30) => (
+                <div className="metric">
+                    <div className="metric-label">{label}</div>
+                    <div className="metric-bar">
+                        <div 
+                            className="metric-fill"
+                            style={{
+                                width: `${(value / maxValue) * 100}%`,
+                                backgroundColor: value > maxValue * 0.7 
+                                    ? 'var(--glow-green)'
+                                    : value > maxValue * 0.3 
+                                        ? 'var(--glow-amber)'
+                                        : 'var(--glow-rose)'
+                            }}
+                        />
+                    </div>
+                </div>
+            );
+
+            const renderPerspective = () => {
+                switch(perspective) {
+                    case 'dependencies':
+                        return (
+                            <div className="project-dependencies">
+                                {repo.dependencies && repo.dependencies.map(dep => (
+                                    <div key={dep.name} className="dependency-item">
+                                        <span className="dependency-name">{dep.name}</span>
+                                        <span className="dependency-version">{dep.version}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    case 'deployment':
+                        return (
+                            <div className="project-deployments">
+                                {repo.instances && repo.instances.map(instance => (
+                                    <div key={instance.name} className="deployment-item">
+                                        <span className="deployment-name">{instance.name}</span>
+                                        <span className="deployment-status">{instance.status}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    default:
+                        return (
+                            <div className="project-overview">
+                                <div className="project-metrics">
+                                    {renderMetricBar('Stars', metrics.starScore)}
+                                    {renderMetricBar('Recency', metrics.updateScore)}
+                                    {renderMetricBar('Completeness', 
+                                        metrics.languageScore + 
+                                        metrics.descriptionScore + 
+                                        metrics.homepageScore,
+                                        40
+                                    )}
+                                </div>
+                                <div className="project-tech-stack">
+                                    {repo.language && (
+                                        <span className="tech-tag">{repo.language}</span>
+                                    )}
+                                    {repo.topics && repo.topics.slice(0, 3).map(topic => (
+                                        <span key={topic} className="tech-tag">{topic}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                }
+            };
+
+            return (
+                <div 
+                    className="project-card"
+                    style={{
+                        '--project-health': `${score}%`,
+                        '--project-glow': score > 70 
+                            ? 'var(--glow-green)'
+                            : score > 50 
+                                ? 'var(--glow-blue)'
+                                : 'var(--glow-rose)'
+                    }}
+                >
+                    <div className="project-header">
+                        <span className="project-name">{repo.name}</span>
+                        <span 
+                            className="project-score"
+                            title={`Total Project Health: ${score}%`}
+                        >
+                            {score}%
+                        </span>
+                    </div>
+                    <div className="project-path">
+                        {repo.full_name}
+                    </div>
+                    <div className="project-description">
+                        {repo.description || 'No description available'}
+                    </div>
+                    <div className="project-perspective-switcher">
+                        <button 
+                            onClick={() => setIsExpanded(!isExpanded)}
+                            className="perspective-toggle"
+                        >
+                            {isExpanded ? 'Collapse' : 'Expand'} Details
+                        </button>
+                        <div className="perspective-buttons">
+                            <button 
+                                onClick={() => perspective === 'overview' 
+                                    ? null 
+                                    : setPerspective('overview')}
+                                className={perspective === 'overview' 
+                                    ? 'active' 
+                                    : ''}
+                            >
+                                Overview
+                            </button>
+                            <button 
+                                onClick={() => perspective === 'dependencies' 
+                                    ? null 
+                                    : setPerspective('dependencies')}
+                                className={perspective === 'dependencies' 
+                                    ? 'active' 
+                                    : ''}
+                            >
+                                Dependencies
+                            </button>
+                            <button 
+                                onClick={() => perspective === 'deployment' 
+                                    ? null 
+                                    : setPerspective('deployment')}
+                                className={perspective === 'deployment' 
+                                    ? 'active' 
+                                    : ''}
+                            >
+                                Deployment
+                            </button>
+                        </div>
+                    </div>
+                    {isExpanded && renderPerspective()}
+                </div>
+            );
+        };
+
+        const Dashboard = () => {
+            const [repositories, setRepositories] = React.useState([]);
+            const [isLoading, setIsLoading] = React.useState(true);
+            const [error, setError] = React.useState(null);
+            const [activePerspective, setActivePerspective] = React.useState('overview');
+
+            React.useEffect(() => {
+                const fetchRepositories = async () => {
+                    try {
+                        const response = await fetch('https://api.github.com/users/uprootiny/repos?sort=updated');
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch repositories');
+                        }
+                        const data = await response.json();
+                        const enhancedRepos = await Promise.all(
+                            data.map(async (repo) => {
+                                try {
+                                    const contributorsResponse = await fetch(`${repo.contributors_url}`);
+                                    const contributors = await contributorsResponse.json();
+                                    return {
+                                        ...repo,
+                                        contributors: contributors.length,
+                                        lastCommitDate: repo.updated_at
+                                    };
+                                } catch (detailError) {
+                                    console.error(`Error fetching details for ${repo.name}:`, detailError);
+                                    return repo;
+                                }
+                            })
+                        );
+                        setRepositories(enhancedRepos);
+                        setIsLoading(false);
+                    } catch (err) {
+                        setError(err.message);
+                        setIsLoading(false);
+                    }
+                };
+                fetchRepositories();
+            }, []);
+
+            if (isLoading) {
+                return (
+                    <div className="container">
+                        <div className="project-card">
+                            <div className="project-header">
+                                <h2>Loading Projects...</h2>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (error) {
+                return (
+                    <div className="container">
+                        <div className="project-card">
+                            <div className="project-header" style={{backgroundColor: 'var(--glow-rose)'}}>
+                                <h2>Error Loading Projects</h2>
+                            </div>
+                            <div className="project-content">
+                                <p>{error}</p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="container">
+                    <header>
+                        <div className="header-logo">
+                            <div className="logo-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(64, 128, 255, 0.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="3" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="14" width="7" height="7"></rect>
+                                    <rect x="3" y="14" width="7" height="7"></rect>
+                                </svg>
+                            </div>
+                            <span className="logo-text">uprootiny's Projects</span>
+                        </div>
+                    </header>
+                    <main className="main-content">
+                        <section id="projects" className="dashboard-section">
+                            <div className="section-header">
+                                <h2 className="section-title">Project Dashboard</h2>
+                                <p className="section-subtitle">
+                                    Comprehensive overview of development initiatives
+                                </p>
+                            </div>
+                            <div className="project-gallery">
+                                <Coverflow
+                                    width="960"
+                                    height="500"
+                                    displayQuantityOfSide={2}
+                                    navigation={true}
+                                    enableScroll={true}
+                                    clickable={true}
+                                    active={0}
+                                >
+                                    {repositories.map(repo => (
+                                        <div
+                                            key={repo.id}
+                                            onClick={() => setActivePerspective('overview')}
+                                        >
+                                            <ProjectCard 
+                                                repo={repo} 
+                                                perspective={activePerspective}
+                                            />
+                                        </div>
+                                    ))}
+                                </Coverflow>
+                            </div>
+                        </section>
+                    </main>
+                    <footer className="text-center mt-8 text-gray-500">
+                        <p>Generated using GitHub API</p>
+                    </footer>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<Dashboard />, document.getElementById('root'));
+    </script>
 </body>
 </html>
