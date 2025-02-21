@@ -1,0 +1,11 @@
+{
+  "name": "@uprootiny/visualization",
+  "version": "0.1.0",
+  "description": "Shared visualization and charting components",
+  "type": "module",
+  "main": "index.js",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
