@@ -1,7 +1,9 @@
 {
   "name": "@uprootiny/visualization",
   "version": "0.1.0",
+  "description": "Shared visualization and charting components",
   "type": "module",
+  "main": "src/main.jsx",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
